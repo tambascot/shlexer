@@ -167,7 +167,10 @@ function countWords(act_limit, scene_limit, dramchar_limit) {
 		} else if (bisnona.nodeName == "sp" && bisnona.getAttribute("who") != null) {
 			// the "who attribute has some trailing chars to slice off"
 			speaker = bisnona.getAttribute("who").slice(1, -4);
-		} // TO-DO: need to figure out how to handle this when the word is in a song, and a speaker isn't given. as in fs-tmp-0162900 
+		} else if (bisnona.getAttribute("type") === "song") {
+			// if the word is in a song, we have to go a bit further into the family tree...
+			speaker = bisnona.parentNode.getAttribute("who").slice(1, -4);
+		}
 		else { continue; }
 		
 		console.log(speaker);
@@ -312,7 +315,8 @@ function displayResults(input_hash) {
 	
 	debugString += "</pre>";
 	
-	document.getElementById("debug").innerHTML = debugString;
+	// uncomment for debugging report:
+	// document.getElementById("debug").innerHTML = debugString;
 	
 }
 	
