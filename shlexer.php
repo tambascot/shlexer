@@ -6,7 +6,7 @@
 <html>
 
 <? 
-	$VERSION = "0.2a"; 	
+	$VERSION = "0.3a"; 	
 ?>
 
 <head>
@@ -37,6 +37,8 @@ td {
 <script>
 // a global hash of words that we encounter in the script that we're analyzing. This is necessary so that we can make the display of the words and their tallys separate from other aspects of the document.
 let words_hash = new Map();
+	
+let debug_array = [];
 
 // a global has of the parsed xmlDoc. This is necessary so that we do not have to fire the countWords function from within one of the functions that sets up the scene and character selection menus. 
 var xmlDoc;
@@ -151,64 +153,73 @@ function countWords(act_limit, scene_limit, dramchar_limit) {
   	for (let x = 0; x < words.length; x++) {
 		// the grandparent node contains the name of the speaker.
 		let nona = words[x].parentNode.parentNode;
+		
+		// or the great-grandparent node does.
+		let bisnona = words[x].parentNode.parentNode.parentNode;
+		let speaker = "";
 
 		// we only want to consider this work if it has a 
-		// named speaker. 
+		// named speaker. That will either be the grandparent or the great-grandparent
+		// of the w element in question.
     	if (nona.nodeName == "sp" && nona.getAttribute("who") != null) {
-    
-	    	// the "who attribute has some trailing chars to slice off"
-			let speaker = nona.getAttribute("who").slice(1, -4);
+			// the "who attribute has some trailing chars to slice off"
+			speaker = nona.getAttribute("who").slice(1, -4);	
+		} else if (bisnona.nodeName == "sp" && bisnona.getAttribute("who") != null) {
+			// the "who attribute has some trailing chars to slice off"
+			speaker = bisnona.getAttribute("who").slice(1, -4);
+		} // TO-DO: need to figure out how to handle this when the word is in a song, and a speaker isn't given. as in fs-tmp-0162900 
+		else { continue; }
+		
+		console.log(speaker);
       
-			// the n attribute is the TLN containing the word, which also has the act and scene values.  
-			let tln = words[x].getAttribute("n")
+		// the n attribute is the TLN containing the word, which also has the act and scene values.  
+		let tln = words[x].getAttribute("n");
 
-	  		if (speaker != null && tln != null) {
-        
-		  		// if the tln contains "SD," it's a stage direction, so don't count it.
-		  		if (tln.includes("SD") == true) {
-					continue;
-    	  		}
-		  
-        		// extract the act and scene values from the TLN
-        		let tln_array = tln.split(".");
-		        let act = tln_array[0];
-        		let sce = tln_array[1];
+		if (speaker != null && tln != null) {
 
-				// if the speaker of the word isn't one we're
-        		// looking for, look at the next word.
-				if (speaker != dramchar_limit && dramchar_limit.toLowerCase() != "all") { 
-					continue; 
-				}
-        
-				// if the word is from an act that we're not 
-				// examining, look at the next word.
-				if (act !=  act_limit && act_limit.toLowerCase() != "all" ) { 
-					continue; 
-				}
-            
-				// if the word is from a scene that we're not 
-				// examining, look at the next word. 
-				if (sce != scene_limit && scene_limit.toLowerCase() != "all") { 
-					continue; 
-				}
-  
-				// convert the word to lower case and store in a 
-				// more convenient variable. 
-				let word = words[x].childNodes[0].nodeValue.toLowerCase();
+			// if the tln contains "SD," it's a stage direction, so don't count it.
+			if (tln.includes("SD") == true) {
+				continue;
+			}
 
-  				// if the word is in the hash, increment its count by 1, otherwise add it to the hash with a value of 1.
-        		if (words_hash.has(word)) {
-        			let count = (words_hash.get(word) + 1);
-          			words_hash.set(word, count);   
-        		} else {
-        			words_hash.set(word, 1);
-        		}
-      		}
+			// extract the act and scene values from the TLN
+			let tln_array = tln.split(".");
+			let act = tln_array[0];
+			let sce = tln_array[1];
+
+			// if the speaker of the word isn't one we're
+			// looking for, look at the next word.
+			if (speaker != dramchar_limit && dramchar_limit.toLowerCase() != "all") { 
+				continue; 
+			}
+
+			// if the word is from an act that we're not 
+			// examining, look at the next word.
+			if (act !=  act_limit && act_limit.toLowerCase() != "all" ) { 
+				continue; 
+			}
+
+			// if the word is from a scene that we're not 
+			// examining, look at the next word. 
+			if (sce != scene_limit && scene_limit.toLowerCase() != "all") { 
+				continue; 
+			}
+
+			// convert the word to lower case and store in a 
+			// more convenient variable. 
+			let word = words[x].childNodes[0].nodeValue.toLowerCase();
+
+			// if the word is in the hash, increment its count by 1, otherwise add it to the hash with a value of 1.
+			if (words_hash.has(word)) {
+				let count = (words_hash.get(word) + 1);
+				words_hash.set(word, count);   
+			} else {
+				words_hash.set(word, 1);
+			}
 		}
 	}
-  
-  	// return true when complete.
-	return true  
+	
+	return true;
 }
 
 // verifySpeaker
@@ -294,7 +305,17 @@ function displayResults(input_hash) {
   	resultsTable += "\n</table>\n";
 
 	document.getElementById("results").innerHTML = resultsTable;
+	
+	let debugString = "<pre>\nTotal counted: " + debug_array.length + "\n";
+	
+	debug_array.forEach((element) => debugString += element += "\n");
+	
+	debugString += "</pre>";
+	
+	document.getElementById("debug").innerHTML = debugString;
+	
 }
+	
 </script>
 
 </head>
@@ -347,6 +368,10 @@ function displayResults(input_hash) {
     <div id="results">
       <!-- The results of the analysis -->
     </div>
+	  
+	<div id="debug">
+		
+ 	</div>
 
   <div id="footer">
     <p>
@@ -358,10 +383,13 @@ function displayResults(input_hash) {
 	  <h4>Changelog</h4>
       <ul>
 		  <li>
-			  Version 0.1a: 30 July 2024. Initial alpha release.
+			  Version 0.3a: 8 Aug 2024. Corrected bug that was excluding words that are nested in a speech as part of an &lt;lg&gt;" element. 
 		  </li>
 		  <li>
 			  Version 0.2a: 03 Aug 2024. Corrected bug that was causing stage directions to be counted as spoken words.
+		  </li>
+		  <li>
+			  Version 0.1a: 30 July 2024. Initial alpha release.
 		  </li>
 			  
       </ul>
